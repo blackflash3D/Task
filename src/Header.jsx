@@ -10,7 +10,9 @@ export default function Header() {
         <h1 style={styles.logo}>Greenfield Local Hub</h1>
         <div style={styles.menuIcon} onClick={() => setShowNav(!showNav)}>
           &#9776;
+
         </div>
+
       </div>
 
       {showNav && <Navbar />}
