@@ -1,4 +1,4 @@
-// ---- IMPORTS ----
+// ================= SERVER =================
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
@@ -6,21 +6,17 @@ const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-// ---- APP SETUP ----
 const app = express();
 const port = 5000;
-const SECRET = "mysecretkey123"; // move to env in production
+const SECRET = "mysecretkey123";
 
 app.use(cors());
 app.use(bodyParser.json());
 
-// ---- DATABASE ----
-const db = new sqlite3.Database("./glh.db", (err) => {
-  if (err) console.error(err.message);
-  else console.log("Connected to SQLite database.");
-});
+// ================= DB =================
+const db = new sqlite3.Database("./glh.db");
 
-// ---- TABLE CREATION ----
+// ================= TABLES =================
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -35,11 +31,13 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       producer_id INTEGER,
+      image TEXT,
       name TEXT,
       price REAL,
       stock INTEGER,
-      description TEXT,
       amount_per_sale INTEGER,
+      description TEXT,
+      is_out_of_stock INTEGER DEFAULT 0,
       FOREIGN KEY (producer_id) REFERENCES users(id)
     )
   `);
@@ -58,71 +56,47 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       order_id INTEGER,
       product_id INTEGER,
-      quantity INTEGER,
-      FOREIGN KEY (order_id) REFERENCES orders(id),
-      FOREIGN KEY (product_id) REFERENCES products(id)
+      quantity INTEGER
     )
   `);
 });
 
-// ---- AUTH ROUTES ----
-
-// SIGNUP
+// ================= AUTH =================
 app.post("/signup", async (req, res) => {
   const { email, password, role } = req.body;
+  if (!email || !password || !role) return res.status(400).send("Missing fields");
 
-  if (!email || !password || !role) {
-    return res.status(400).send("Missing fields");
-  }
+  const hashed = await bcrypt.hash(password, 10);
 
-  try {
-    const hashed = await bcrypt.hash(password, 10);
+  db.run(
+    "INSERT INTO users (email, password, role) VALUES (?, ?, ?)",
+    [email, hashed, role],
+    function (err) {
+      if (err) return res.status(400).send(err.message);
 
-    db.run(
-      "INSERT INTO users (email, password, role) VALUES (?, ?, ?)",
-      [email, hashed, role],
-      function (err) {
-        if (err) return res.status(400).send(err.message);
-
-        const token = jwt.sign(
-          { id: this.lastID, role },
-          SECRET
-        );
-
-        res.json({ token, role });
-      }
-    );
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
-
-// LOGIN
-app.post("/login", (req, res) => {
-  const { email, password } = req.body;
-
-  db.get(
-    "SELECT * FROM users WHERE email = ?",
-    [email],
-    async (err, user) => {
-      if (err || !user) return res.status(400).send("User not found");
-
-      const match = await bcrypt.compare(password, user.password);
-      if (!match) return res.status(400).send("Wrong password");
-
-      const token = jwt.sign(
-        { id: user.id, role: user.role },
-        SECRET
-      );
-
-      res.json({ token, role: user.role });
+      const token = jwt.sign({ id: this.lastID, role }, SECRET);
+      res.json({ token, role });
     }
   );
 });
 
-// ---- PRODUCT ROUTES ----
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
 
-// GET ALL PRODUCTS
+  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
+    if (!user) return res.status(400).send("User not found");
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(400).send("Wrong password");
+
+    const token = jwt.sign({ id: user.id, role: user.role }, SECRET);
+    res.json({ token, role: user.role, userId: user.id });
+  });
+});
+
+// ================= PRODUCTS =================
+
+// GET ALL (LIVE FEED SOURCE)
 app.get("/products", (req, res) => {
   db.all("SELECT * FROM products", [], (err, rows) => {
     if (err) return res.status(400).send(err.message);
@@ -130,23 +104,23 @@ app.get("/products", (req, res) => {
   });
 });
 
-// ADD PRODUCT
+// CREATE PRODUCT
 app.post("/products", (req, res) => {
   const {
     producer_id,
+    image,
     name,
     price,
     stock,
-    description,
     amount_per_sale,
-    image
+    description
   } = req.body;
 
   db.run(
     `INSERT INTO products 
-    (producer_id, name, price, stock, description, amount_per_sale, image)
+    (producer_id, image, name, price, stock, amount_per_sale, description)
     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [producer_id, name, price, stock, description, amount_per_sale, image],
+    [producer_id, image, name, price, stock, amount_per_sale, description],
     function (err) {
       if (err) return res.status(400).send(err.message);
       res.json({ id: this.lastID });
@@ -157,20 +131,20 @@ app.post("/products", (req, res) => {
 // UPDATE PRODUCT
 app.put("/products/:id", (req, res) => {
   const {
+    image,
     name,
     price,
     stock,
-    description,
     amount_per_sale,
-    image
+    description
   } = req.body;
 
   db.run(
     `UPDATE products
-     SET name = ?, price = ?, stock = ?, description = ?, amount_per_sale = ?, image = ?
-     WHERE id = ?`,
-    [name, price, stock, description, amount_per_sale, image, req.params.id],
-    function (err) {
+     SET image=?, name=?, price=?, stock=?, amount_per_sale=?, description=?
+     WHERE id=?`,
+    [image, name, price, stock, amount_per_sale, description, req.params.id],
+    (err) => {
       if (err) return res.status(400).send(err.message);
       res.sendStatus(200);
     }
@@ -179,43 +153,25 @@ app.put("/products/:id", (req, res) => {
 
 // DELETE PRODUCT
 app.delete("/products/:id", (req, res) => {
+  db.run("DELETE FROM products WHERE id=?", [req.params.id], (err) => {
+    if (err) return res.status(400).send(err.message);
+    res.sendStatus(200);
+  });
+});
+
+// TOGGLE STOCK STATUS
+app.patch("/products/:id/stock", (req, res) => {
   db.run(
-    "DELETE FROM products WHERE id = ?",
+    "UPDATE products SET is_out_of_stock = NOT is_out_of_stock WHERE id=?",
     [req.params.id],
-    function (err) {
+    (err) => {
       if (err) return res.status(400).send(err.message);
       res.sendStatus(200);
     }
   );
 });
 
-// ---- ORDER ROUTES ----
-
-app.post("/orders", (req, res) => {
-  const { user_id, items, total_price } = req.body;
-  const date = new Date().toISOString();
-
-  db.run(
-    "INSERT INTO orders (user_id, total_price, date) VALUES (?, ?, ?)",
-    [user_id, total_price, date],
-    function (err) {
-      if (err) return res.status(400).send(err.message);
-
-      const orderId = this.lastID;
-
-      items.forEach((item) => {
-        db.run(
-          "INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)",
-          [orderId, item.id, item.quantity]
-        );
-      });
-
-      res.json({ message: "Order placed successfully" });
-    }
-  );
-});
-
-// ---- START SERVER ----
+// ================= START =================
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

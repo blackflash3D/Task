@@ -1,105 +1,154 @@
-/* 1. Reset default browser styles */
+/* =========================
+   THEME VARIABLES
+========================= */
+
+/* LIGHT MODE (default) */
+:root {
+  --bg: #ffffff;
+  --text: #222;
+  --card: #f5f5f5;
+  --primary: #43A047;
+  --primary-dark: #2e7d32;
+  --border: #ddd;
+}
+
+/* DARK MODE */
+body.dark {
+  --bg: #121212;
+  --text: #f5f5f5;
+  --card: #1e1e1e;
+  --primary: #66bb6a;
+  --primary-dark: #388e3c;
+  --border: #333;
+}
+
+/* =========================
+   GLOBAL RESET
+========================= */
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* 2. Full-height html/body */
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  background-color: #ffffff; /* page background */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
 }
 
-/* 3. Header & Footer styling */
-header, footer {
-  width: 100%;
-  background-color: #43A047; /* GLH brand color */
+/* =========================
+   LAYOUT
+========================= */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  padding: 20px;
+}
+
+/* =========================
+   HEADER / FOOTER
+========================= */
+
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 10px 20px;
+}
+
+.footer {
+  background: var(--primary);
   color: white;
   text-align: center;
+  padding: 15px;
 }
 
-/* Optional inner container for alignment */
-header .inner, footer .inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 15px 20px;
-}
-
-/* 4. Main container (centered, flex) */
-main {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #f5f3f3;
-  overflow: hidden; /* prevents scroll */
-}
-
-/* 5. Card styling (login/signup) */
-.card {
-  background-color: #A1C2A2; /* center card color */
-  padding: 30px;
-  border-radius: 10px;
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-/* 6. Inputs & Buttons */
-input {
-  display: block;
-  width: 100%;
-  padding: 10px;
-  margin: 10px 0;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
+/* =========================
+   BUTTONS
+========================= */
 
 button {
-  width: 100%;
   padding: 10px;
-  margin-top: 10px;
   border: none;
-  background-color: #43A047;
+  background: var(--primary);
   color: white;
-  font-size: 16px;
-  border-radius: 5px;
   cursor: pointer;
+  border-radius: 5px;
 }
 
 button:hover {
-  background-color: #2e7d32;
+  background: var(--primary-dark);
 }
 
-/* 7. Toggle links for login/signup */
-.toggle {
-  margin-top: 15px;
+/* =========================
+   CARDS
+========================= */
+
+.card {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 10px;
+}
+
+/* =========================
+   NAVBAR
+========================= */
+
+.nav {
+  position: absolute;
+  top: 70px;
+  right: 30px;
+  background: var(--card);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.nav a {
+  display: block;
+  margin-bottom: 10px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+/* =========================
+   PRODUCT GRID
+========================= */
+
+.grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
+}
+
+.product-card {
+  border: 1px solid var(--border);
+  padding: 10px;
   cursor: pointer;
-  text-decoration: underline;
-  color: #ffffff;
 }
 
-/* 8. Make container full-screen flex */
-.container {
+/* =========================
+   MODAL
+========================= */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
   display: flex;
-  flex-direction: column;
-  height: 100vh; /* full viewport height */
+  justify-content: center;
+  align-items: center;
 }
 
-/* 9. Scrollable content inside card if needed */
-.card-scroll {
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-/* 10. Responsive tweaks */
-@media (max-width: 500px) {
-  .card {
-    padding: 20px;
-    width: 90%;
-  }
+.modal {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 10px;
+  width: 300px;
 }

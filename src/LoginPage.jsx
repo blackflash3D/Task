@@ -169,7 +169,7 @@ export default function LoginPage() {
           )}
 
           <button type="submit" style={styles.button}>
-            {mode === "login" ? "Login" : "Create Account"}
+            {mode === "login" ? "Sign in" : "Create Account"}
           </button>
           {error && <p style={styles.error}>{error}</p>}
         </form>
